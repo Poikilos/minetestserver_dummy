@@ -45,7 +45,7 @@ end
 local function add_something_to_biome(name, biome, whats, def)
 	local ret = true
 	if _registered_biomes[biome] == nil then
-		print("	 * ERROR: the biome '"..biome.."' is not registered yet during add_something_to_biome (def.ore='"..def.ore.."')")
+		print("	 * ERROR: the biome '"..biome.."' is not registered yet during add_something_to_biome (def[name_of_name_value]='"..name.."')")
 	else
 		if _registered_biomes[biome][whats] == nil then
 			_registered_biomes[biome][whats] = {}
@@ -61,12 +61,12 @@ function _G.dummy_core.register_ore(def)
 	if def.biomes ~= nil then
 		for i = 1, #def.biomes do
 			biome = def.biomes[i]
-			print("	 * adding an ore '"..def.ore.."' to biome '"..biome.."'")
+			-- print("    * adding an ore '"..def.ore.."' to biome '"..biome.."'")
 			add_something_to_biome(def.ore, biome, "ores", def)
 		end
 	 else
 		biome = "any"
-			print("	 * adding an ore '"..def.ore.."' for any biome")
+		print("  * adding an ore '"..def.ore.."' for any biome")
 		add_something_to_biome(def.ore, biome, "ores", def)
 	 end
 	-- _registered_ores[def.name] = def
@@ -76,7 +76,7 @@ local _registered_decorations = {}
 function _G.dummy_core.register_decoration(def)
 	-- TODO: make function that replaces both this and register_ore which both this and that call.
 	-- takes decoration def
-	print("  * [minetest_dummy] is pretending to register decoration: "..table.tostring(def))  -- table.tostring is from minetest_dummy/extras.lua
+	-- print("  * [minetest_dummy] is pretending to register decoration: "..table.tostring(def))  -- table.tostring is from minetest_dummy/extras.lua
 	local name = def.decoration
 	if name == nil then
 		name = def.name
@@ -85,12 +85,12 @@ function _G.dummy_core.register_decoration(def)
 	if def.biomes ~= nil then
 		for i = 1, #def.biomes do
 			biome = def.biomes[i]
-			print("	 * adding a decoration '"..name.."' to biome '"..biome.."'")
+			-- print("    * adding a decoration '"..name.."' to biome '"..biome.."'")
 			add_something_to_biome(name, biome, "decorations", def)
 		end
 	 else
 		biome = "any"
-			print("	 * adding a decoration '"..name.."' for any biome")
+		print("    * adding a decoration '"..name.."' for any biome")
 		add_something_to_biome(name, biome, "decorations", def)
 	 end
 	-- _registered_decorations[def.name] = def
@@ -135,7 +135,7 @@ function dummy_core.get_modpath(str)
 	local try_path = nil
 	for i = 1, #mod_parents do
 		local try_path = mod_parents[i] .. "/" .. str
-		print("* trying to find " .. str .. " in '" .. mod_parents[i] .. "'")
+		-- print("* trying to find " .. str .. " in '" .. mod_parents[i] .. "'")
 		if str and isdir(try_path) then
 			return try_path
 		end
@@ -149,18 +149,18 @@ function dummy_core.get_modpath(str)
 end
 
 function dummy_core.get_mapgen_setting(str)
-	return mapgen_settings_values[str]
+	return _mapgen_settings_values[str]  -- minetest_dummy's python code generates this!
 end
 
 
 function dummy_core.setting_get(str)
-	return settings_values[str]
+	return _settings_values[str]  -- minetest_dummy's python code generates this!
 end
 function dummy_core.setting_getbool(str)
-	return settings_values[str]
+	return _settings_values[str]  -- minetest_dummy's python code generates this!
 end
 function dummy_core.setting_set(str, v)
-	settings_values[str] = v
+	_settings_values[str] = v
 end
 
 dummy_core.settings = {}

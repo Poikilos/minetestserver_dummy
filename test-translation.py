@@ -224,9 +224,14 @@ def main():
     loaded_lines.append("print(\"  * [minetest_dummy] DIR_DELIM is '\"..DIR_DELIM..\"'\")")
     loaded_lines.append('builtin_path = "{}{}"'.format(builtin,
                                                        os.path.sep))
-    loaded_lines.append('local settings_values = {}')  # TODO: fill in this table
-    loaded_lines.append('settings_values.language = "{}"'.format("ru"))  # TODO: allow user to set language
-    loaded_lines.append('local mapgen_settings_values = {}')
+    loaded_lines.append('local _settings_values = {}')  # TODO: fill in this table
+    # TODO: load defaults then _settings_values
+    loaded_lines.append('_settings_values.language = "{}"'.format("ru"))  # TODO: allow user to set language
+    loaded_lines.append('local _mapgen_settings_values = {}')
+    # Minimum _mapgen_settings_values:
+    # - chunksize must be an int.
+    # TODO: load defaults then _mapgen_settings_values
+    loaded_lines.append('_mapgen_settings_values.{} = {}'.format("chunksize", 16))
 
     loaded_lines.append("mod_parents = {}")
     # get_mods must be done right away so we have all parent locations
@@ -244,8 +249,8 @@ def main():
     else:
         print("* using world '{}'".format(world_path))
     loaded_lines.append('wpath = "{}"'.format(world_path))
-    # TODO: populate Lua table named mapgen_settings_values here
-    # TODO: populate Lua table named settings_values here
+    # TODO: populate Lua table named _mapgen_settings_values here
+    # TODO: populate Lua table named _settings_values here
     for path in paths:
         loaded_lines.append('mod_parents[#mod_parents+1] = "{}"'.format(path))
     for name, path in modpack_paths.items():
