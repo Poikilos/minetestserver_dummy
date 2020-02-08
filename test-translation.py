@@ -19,12 +19,15 @@ minetest = os.path.join(profile, "minetest")
 games = os.path.join(minetest, "games")
 game = os.path.join(games, "Bucket_Game")
 mods_path = os.path.join(game, "mods")
-builtin = os.path.join(minetest, "builtin")
+builtin_path = os.path.join(minetest, "builtin")
 paths = []  # This changes in main()
 
 mod_paths = {}
 modpack_paths = {}
 max_depth = 2
+
+_lua_enclosure_fmt = '--{} "{}"'
+
 
 def get_mods(folder_path, suppress_bad=False, depth=0,
              append_to_paths=True):
@@ -61,21 +64,36 @@ loaded_lines = []
 def force_load_lua_line(line):
     loaded_lines.append(line)
 
-def force_load_lua_lines(lines, mod_name=None):
-    if mod_name is not None:
-        loaded_mods.append(mod_name)
-        loaded_lines.append("current_modname = {}".format(mod_name))
-        loaded_lines.append("-- [minetest_dummy] The next line is"
-                            " line 1 in force-loaded lines from"
-                            " {}".format(mod_name))
+
+# forced_mods = []
+
+def force_load_lua_lines(lines, lua_path, mod_name):
+    this_fmt = _lua_enclosure_fmt
+    if mod_name is None:
+        raise ValueError("You must provide mod names even for dummies.")
+    loaded_mods.append(mod_name)
+    loaded_lines.append("current_modname = {}".format(mod_name))
+    loaded_lines.append("-- [minetest_dummy lua] The line after the"
+                        " next is line 1 in force-loaded lines from"
+                        " {}".format(mod_name))
+    line = _lua_enclosure_fmt.format("START", lua_path)
+
+    loaded_lines.append(line)
     loaded_lines.extend(lines)
+    if mod_name is not None:
+        loaded_lines.append(_lua_enclosure_fmt.format("END", lua_path))
 
 
-def force_load_lua(lua_path, mod_name=None):
-    force_load_lua_lines([line.rstrip('\n') for line in open(lua_path)])
+def force_load_lua(lua_path, mod_name):
+    force_load_lua_lines([line.rstrip('\n') for line in open(lua_path)],
+                         lua_path, mod_name)
 
 def load_mod(mod_path):
     name = os.path.split(mod_path)[-1]
+    if name in loaded_mods:
+        print("* [minetest_dummy python] {} is already_loaded, so"
+              " '{}' will be skipped.".format(name, mod_path))
+        return True
     loaded_mods.append(name)
     print("* {} is now marked as loaded.".format(name))
     depends_path = os.path.join(mod_path, "depends.txt")
@@ -93,19 +111,22 @@ def load_mod(mod_path):
                     if sub_mod_name not in loaded_mods:
                         load_mod(sub_mod_path)
                 else:
-                    print("* ERROR: The mod {} is not in the paths"
-                          " ({})".format(sub_mod_name,
-                                         ", ".join(paths)))
+                    raise RuntimeError(
+                        "* ERROR: The mod {} is not in the paths"
+                        " ({})".format(sub_mod_name, ", ".join(paths))
+                    )
 
-
-    init_path = os.path.join(mod_path, "init.lua")
-    current_lines = [line.rstrip('\n') for line in open(init_path)]
+    lua_path = os.path.join(mod_path, "init.lua")
+    current_lines = [line.rstrip('\n') for line in open(lua_path)]
     loaded_lines.append('current_modname = "{}"'.format(name))
     # TODO: set _last_run_mod at the time of every lua call??
     loaded_lines.append('_last_run_mod = "{}"'.format(name))
-    loaded_lines.append("-- [minetest_dummy] The next line is"
+    loaded_lines.append("-- [minetest_dummy lua] The line after the next is"
                         " line 1 in {}'s init.lua".format(mod_path))
+    loaded_lines.append(_lua_enclosure_fmt.format("START", lua_path))
     loaded_lines.extend(current_lines)
+    loaded_lines.append(_lua_enclosure_fmt.format("END", lua_path))
+    return True
 
 def DEPECATED_execute_iterator(cmd):
     """This is an iterator! See
@@ -170,9 +191,9 @@ def test_translations(mod_path):
                           " {}".format(sub_path))
     print("* test_translations detected: " + ", ".join(languages))
     load_mod(mod_path)
-    finished_mods = ["minetest_dummy", "minetest_dummy.extras", "builtin"]
-    finished_mods.extend(loaded_mods)
-    loaded_lines.append('print("{}")'.format("* [minetest_dummy] Lua init completed for: {}".format(finished_mods)))
+
+    # all_mods = loaded_mods + forced_mods
+    loaded_lines.append('print("{}")'.format("* [minetest_dummy lua] Lua init completed for: {}".format(loaded_mods)))
     print(
         "* loaded {} line(s) from: {}".format(
             len(loaded_lines),
@@ -197,13 +218,14 @@ def test_translations(mod_path):
         # os.remove(tmp_path)
         # print("* removed '{}'".format(tmp_path))
 
+args = sys.argv
 def main():
     global repos
     global minetest
     global games
     global game
     global mods_path
-    global builtin
+    global builtin_path
     global paths
 
     # Your personal projects path FIRST
@@ -214,7 +236,19 @@ def main():
           " {} modpack(s) so far...".format(len(mod_paths),
                                             len(modpack_paths)))
 
-    use_version = 6
+    settings = {}
+    settings["use_version"] = "5"
+    for arg_i in range(1, len(args)):  # skip 0 which is self
+        arg = args[arg_i]
+        if arg.startswith("--"):
+            sign_i = arg.find("=")
+            if sign_i > -1:
+                name = arg[:sign_i]
+                value = arg[sign_i+1:]
+                settings[name] = value
+    print("* [minetest_dummy python] using settings:")
+    for k, v in settings.items():
+        print('  {}: "{}"'.format(k, v))
     share = "/usr/share"
     # compiled minetest (in "local") should take priority:
     try_shares = ["/usr/local/share", "/usr/local/share/games", "/usr/share", "/usr/share/games", "C:\\games"]
@@ -226,23 +260,23 @@ def main():
             share = try_share
             # the local takes precedence
     good_share_flag_dir_name = "minetest"
-    if use_version == 4:
+    if settings["use_version"] == "4":
         minetest = os.path.join(share, "minetest")
         games = os.path.join(minetest, "games")
         game = os.path.join(games, "minetest_game")
         mods_path = os.path.join(game, "mods")
-        builtin = os.path.join(minetest, "builtin")
-    elif use_version == 5:
+        builtin_path = os.path.join(minetest, "builtin")
+    elif settings["use_version"] == "5":
         minetest = os.path.join(share, "minetest")
         minetest_profile = os.path.join(profile, ".minetest")
         games = os.path.join(minetest_profile, "games")
         game = os.path.join(games, "ENLIVEN")
         mods_path = os.path.join(game, "mods")
-        builtin = os.path.join(minetest, "builtin")
-    elif use_version == 6:
-        builtin = os.path.join(minetest, "builtin")
+        builtin_path = os.path.join(minetest, "builtin")
+    elif settings["use_version"] == "6":
+        builtin_path = os.path.join(minetest, "builtin")
     else:
-        raise ValueError("* minetest version {} is not implemented ".format(use_version))
+        raise ValueError("* minetest version {} is not implemented ".format(settings["use_version"]))
     if not os.path.isdir(minetest):
         if os.path.isdir(system_minetest):
             print("* missing '{}'...reverting to '{}'".format(minetest, system_minetest))
@@ -251,7 +285,7 @@ def main():
             games = os.path.join(minetest_profile, "games")
             game = os.path.join(games, "ENLIVEN")
             mods_path = os.path.join(game, "mods")
-            builtin = os.path.join(minetest, "builtin")
+            builtin_path = os.path.join(minetest, "builtin")
         else:
             raise RuntimeError("'{}' is missing".format(minetest))
     else:
@@ -265,8 +299,8 @@ def main():
     loaded_lines.append('DIR_DELIM = "' + os.path.sep + '"')
     # INIT must be game, mainmenu, async, or client:
     loaded_lines.append('INIT = "game"')
-    loaded_lines.append("print(\"  * [minetest_dummy] DIR_DELIM is '\"..DIR_DELIM..\"'\")")
-    loaded_lines.append('builtin_path = "{}{}"'.format(builtin,
+    loaded_lines.append("print(\"  * [minetest_dummy lua] DIR_DELIM is '\"..DIR_DELIM..\"'\")")
+    loaded_lines.append('builtin_path = "{}{}"'.format(builtin_path,
                                                        os.path.sep))
     loaded_lines.append('local _settings_values = {}')  # TODO: fill in this table
     # TODO: load defaults then _settings_values
@@ -296,16 +330,21 @@ def main():
     loaded_lines.append('wpath = "{}"'.format(world_path))
     # TODO: populate Lua table named _mapgen_settings_values here
     # TODO: populate Lua table named _settings_values here
-    for path in paths:
-        loaded_lines.append('mod_parents[#mod_parents+1] = "{}"'.format(path))
+    # NOTE: modpacks must take priority, otherwise get_mod_path in dummy core will find <game>/mods/mesecons before <game>/mods/mesecons/mesecons!
     for name, path in modpack_paths.items():
         loaded_lines.append('mod_parents[#mod_parents+1] = "{}"'.format(path))
+    for path in paths:
+        loaded_lines.append('mod_parents[#mod_parents+1] = "{}"'.format(path))
     minetest_dummy = os.path.dirname(os.path.realpath(__file__))
-    force_load_lua(os.path.join(minetest_dummy, "extras.lua"))
-    force_load_lua(os.path.join(minetest_dummy, "lua_api.lua"))
-    force_load_lua(os.path.join(builtin, "init.lua"), "builtin")
-    force_load_lua(os.path.join(minetest_dummy, "core.lua"))  # override parts of core so things run in a dummy environment
-    force_load_lua(os.path.join(minetest_dummy, "builtin.lua"))  # override parts of builtin so things run in a dummy environment
+
+    force_load_lua(os.path.join(minetest_dummy, "lua.lua"), "dummy_lua")
+    force_load_lua(os.path.join(minetest_dummy, "lua_api.lua"), "dummy_lua_api")
+    force_load_lua(os.path.join(builtin_path, "init.lua"), "builtin")
+    # Override parts of core so things run in a dummy environment:
+    force_load_lua(os.path.join(minetest_dummy, "core.lua"), "dummy_core")
+    # Override parts of builtin so things run in a dummy environment:
+    force_load_lua(os.path.join(minetest_dummy, "builtin.lua"), "dummy_builtin")
+
 
     print("* minetest_dummy discovered {} mod(s) in or outside of"
           " {} modpack(s).".format(len(mod_paths),

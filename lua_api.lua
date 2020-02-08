@@ -1,4 +1,4 @@
---START minetest_dummy/lua_api.lua (provides code that would otherwise be in minetest C code)
+--Provide dummy API that behaves like Minetest's C Lua API.
 
 dummy_core = {}
 
@@ -17,7 +17,7 @@ this_env = "."
 --region Do something closer to what minetest does here.
 -- TODO: finish this
 function setfenv(f, env)
-	print("  * [minetest_dummy] is pretending to set env function '"..string.dump(f).."' for table '"..table.tostring(env).."'") -- table.tostring is from minetest_dummy/extras.lua
+	print("  * [minetest_dummy] is pretending to set env function '"..string.dump(f).."' for table '"..table.tostring(env).."'") -- table.tostring is from minetest_dummy/lua.lua
 	this_env = this_env
 end
 function _G.dummy_core.clear_registered_biomes()
@@ -32,7 +32,7 @@ end
 local _registered_biomes = {}
 _registered_biomes["any"] = {}
 function _G.dummy_core.register_biome(def)
-	-- print("  * [minetest_dummy] is pretending to register biome: "..table.tostring(def))  -- table.tostring is from minetest_dummy/extras.lua
+	-- print("  * [minetest_dummy] is pretending to register biome: "..table.tostring(def))  -- table.tostring is from minetest_dummy/lua.lua
 	-- _registered_biomes[#_registered_biomes+1] = def
 	_registered_biomes[def.name] = def
 end
@@ -57,7 +57,7 @@ end
 
 function _G.dummy_core.register_ore(def)
 	-- takes ore def such as {biomes={"cold_desert"},clust_scarcity=1,noise_params={octaves=1,offset=28,scale=16,seed=90122,spread={x=128,y=128,z=128}},ore="default:silver_sandstone",ore_type="stratum",stratum_thickness=4,wherein={"default:stone"},y_max=46,y_min=10}
-	-- print("  * [minetest_dummy] is pretending to register ore: "..table.tostring(def))  -- table.tostring is from minetest_dummy/extras.lua
+	-- print("  * [minetest_dummy] is pretending to register ore: "..table.tostring(def))  -- table.tostring is from minetest_dummy/lua.lua
 	if def.biomes ~= nil then
 		for i = 1, #def.biomes do
 			biome = def.biomes[i]
@@ -76,7 +76,7 @@ local _registered_decorations = {}
 function _G.dummy_core.register_decoration(def)
 	-- TODO: make function that replaces both this and register_ore which both this and that call.
 	-- takes decoration def
-	-- print("  * [minetest_dummy] is pretending to register decoration: "..table.tostring(def))  -- table.tostring is from minetest_dummy/extras.lua
+	-- print("  * [minetest_dummy] is pretending to register decoration: "..table.tostring(def))  -- table.tostring is from minetest_dummy/lua.lua
 	local name = def.decoration
 	if name == nil then
 		name = def.name
@@ -297,6 +297,17 @@ function dummy_core.item_eat(value)
 end
 
 
---END minetest_dummy/lua_api.lua (provides code that would otherwise be in minetest C code)
+function dummy_core.safe_file_write(filename, data, mode)
+	if mode ~= nil then
+		print("  * [minetest_dummy lua] uh, oh, param 3 isn't implemented")
+	end
+	-- simulate 0.4.17 (breaking API change; not backward-compatible)
+	-- See https://www.tutorialspoint.com/lua/lua_file_io.htm
+	local file = io.open(filename, 'w')
+	file:write(data)
+	file:close()
+	print("* [minetest_dummy lua] wrote '"..filename.."'")
+end
+
 
 core = dummy_core

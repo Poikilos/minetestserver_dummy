@@ -1,7 +1,9 @@
---START minetest_dummy/core.lua (overrides core behavior)
+--Override core behavior.
+
+
 -- do NOT use the file this way: dofile("/home/owner/git/minetest_dummy/init.lua")
 -- infinite loop: intllib = dofile("/home/owner/git/intllib/init.lua")
--- local extras = dofile("/home/owner/git/minetest_dummy/extras.lua") -- loaded by minetest_dummy via python instead, since must load before builtin
+-- local extras = dofile("/home/owner/git/minetest_dummy/lua.lua") -- loaded by minetest_dummy via python instead, since must load before builtin
 
 --minetest = {
 --}
@@ -22,7 +24,7 @@
 --minetest.register_node = core.register_node
 --minetest.override_item = core.override_item
 --minetest.register_craft = core.register_craft
-core = dummy_core
+--core = dummy_core
 minetest = core
 -- dofile doesn't preserve globals above in the called files. We must append the lua like minetest does (from mods indicated in depends.txt files)
 -- current_modname = "intllib"
@@ -30,4 +32,3 @@ minetest = core
 -- current_modname = "travelnet"
 -- dofile("unused/intllib_substitute.lua") -- from Poikilos' travelnet based on travelnet by Sokomine
 -- dofile("/home/owner/git/minetest_dummy/unused/check-pot.lua")
---END minetest_dummy/core.lua (overrides core behavior)

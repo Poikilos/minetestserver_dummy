@@ -1,4 +1,9 @@
+--Override parts of builtin.
+
+
 -- TODO: move things from core to here if they are part of builtin but not part of core
+
+--region builtin/common/misc_helpers.lua
 function dummy_core.privs_to_string(privs)
 	-- called in builtin/common/misc_helpers.lua:761 like:
 	--assert(core.string_to_privs("a,b").b == true)
@@ -17,3 +22,5 @@ function dummy_core.privs_to_string(privs)
 	print("* [minetest_dummy] created privs string '"..ret.."'")
 	return ret
 end
+--endregion builtin/common/misc_helpers.lua
+

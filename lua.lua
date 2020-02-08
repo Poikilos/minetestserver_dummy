@@ -1,4 +1,6 @@
---START minetest_dummy/extras.lua (overrides standard Lua behavior)
+--Override standard Lua behavior.
+
+
 --- exists and isdir are from https://stackoverflow.com/a/40195356
 --- (Hisham H M's answer on https://stackoverflow.com/questions/1340230/check-if-directory-exists-in-lua)
 --- Check if a file or directory exists in this path
@@ -120,14 +122,9 @@ function _G.assert_(v)
    -- If renamed to assert for debugging purposes, this function overrides the existing Lua assert function to prevent minetest_dummy from crashing because it can't do things.
    -- "Lua: Basic Functions: assert. Issues an error when the value of its argument v is false (i.e., nil or false); otherwise, returns all its arguments."
    -- according to https://pgl.yoyo.org/luai/i/assert
-   print("* [minetest_dummy] WARNING: an assertion failed. This is probably because setfenv is fake in minetest_dummy. "..debug.traceback())
+   print("* [minetest_dummy lua] WARNING: an assertion failed. This is probably because setfenv is fake in minetest_dummy. "..debug.traceback())
    return v
 end
 -- _G.assert = assert
 
 pairs = orderedPairs  -- This is necessary to prevent a failed assertion in minetest 5 where it tests core.privs_to_string at the end of builtin/common/misc_helpers.lua
-
-
---END minetest_dummy/extras.lua (overrides standard Lua behavior)
-
-
