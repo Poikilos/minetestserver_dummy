@@ -42,15 +42,17 @@ def get_mods(folder_path, suppress_bad=False, depth=0,
                 is_mod = False
                 is_modpack = True
                 modpack_paths[sub_name] = sub_path
+                # print("  * added modpack: {}".format(sub_path))
             if is_mod:
                 mod_paths[sub_name] = sub_path
+                # print("    * added mod: {}".format(sub_path))
             else:
                 if is_modpack:
                     if depth + 1 <= max_depth:
                         get_mods(sub_path, suppress_bad=suppress_bad, depth=depth+1)
                 else:
                     if not suppress_bad:
-                        print("* '{}' is not a valid"
+                        print("    * '{}' is not a valid"
                               " mod.".format(sub_path))
 
 loaded_mods = []
@@ -196,10 +198,34 @@ def test_translations(mod_path):
         # print("* removed '{}'".format(tmp_path))
 
 def main():
+    global repos
+    global minetest
+    global games
+    global game
+    global mods_path
+    global builtin
+    global paths
+
     # Your personal projects path FIRST
+    print("* getting mods in repos '{}'...".format(repos))
+
     get_mods(repos, suppress_bad=True)  # Your personal repos path FIRST
-    use_version = 5
-    share = "/usr/local/share"
+    print("* minetest_dummy discovered {} mod(s) in or outside of"
+          " {} modpack(s) so far...".format(len(mod_paths),
+                                            len(modpack_paths)))
+
+    use_version = 6
+    share = "/usr/share"
+    # compiled minetest (in "local") should take priority:
+    try_shares = ["/usr/local/share", "/usr/local/share/games", "/usr/share", "/usr/share/games", "C:\\games"]
+    system_minetest = None
+    for try_share in try_shares:
+        try_minetest = os.path.join(try_share, "minetest")
+        if os.path.isdir(try_minetest):
+            system_minetest = try_minetest
+            share = try_share
+            # the local takes precedence
+    good_share_flag_dir_name = "minetest"
     if use_version == 4:
         minetest = os.path.join(share, "minetest")
         games = os.path.join(minetest, "games")
@@ -217,7 +243,25 @@ def main():
         builtin = os.path.join(minetest, "builtin")
     else:
         raise ValueError("* minetest version {} is not implemented ".format(use_version))
-
+    if not os.path.isdir(minetest):
+        if os.path.isdir(system_minetest):
+            print("* missing '{}'...reverting to '{}'".format(minetest, system_minetest))
+            minetest = system_minetest
+            minetest_profile = os.path.join(profile, ".minetest")
+            games = os.path.join(minetest_profile, "games")
+            game = os.path.join(games, "ENLIVEN")
+            mods_path = os.path.join(game, "mods")
+            builtin = os.path.join(minetest, "builtin")
+        else:
+            raise RuntimeError("'{}' is missing".format(minetest))
+    else:
+        print("* using minetest directory '{}'".format(minetest))
+        if system_minetest is not None:
+            print("  (the system's minetest is '{}')".format(system_minetest))
+        else:
+            print("  (there is no systemwide-installed version)")
+    if not os.path.isdir(mods_path):
+        raise RuntimeError("mods_path '{}' does not exist".format(mods_path))
     loaded_lines.append('DIR_DELIM = "' + os.path.sep + '"')
     # INIT must be game, mainmenu, async, or client:
     loaded_lines.append('INIT = "game"')
@@ -237,6 +281,7 @@ def main():
     # get_mods must be done right away so we have all parent locations
     # (mod_parents) of all mods. It doesn't cause a problem
     # with Lua line order, as it does not load any Lua lines.
+    print("* getting mods in mods_path '{}'...".format(mods_path))
     get_mods(mods_path)
 
     loaded_lines.append('current_modname = "{}"'.format(""))
@@ -263,8 +308,8 @@ def main():
     force_load_lua(os.path.join(minetest_dummy, "builtin.lua"))  # override parts of builtin so things run in a dummy environment
 
     print("* minetest_dummy discovered {} mod(s) in or outside of"
-          " {} modpack(s).".format(len(list(mod_paths.keys())),
-                                   len(list(modpack_paths.keys()))))
+          " {} modpack(s).".format(len(mod_paths),
+                                   len(modpack_paths)))
     # for name, path in modpack_paths.items():
     #     print("  - '{}'".format(path))
     # print("* mods:")
