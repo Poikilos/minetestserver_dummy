@@ -5,6 +5,7 @@ import os
 import sys
 
 import subprocess
+from types import Conf
 
 profile = None
 if platform.system() == "Windows":
@@ -97,26 +98,36 @@ def load_mod(mod_path):
     loaded_mods.append(name)
     print("* {} is now marked as loaded.".format(name))
     depends_path = os.path.join(mod_path, "depends.txt")
+    current_depends = []
     if os.path.isfile(depends_path):
-        current_depends = [line.strip() for line in open(depends_path)]
-        for line in current_depends:
-            if len(line) > 0:
-                optional = False
-                sub_mod_name = line
-                if line.endswith("?"):
-                    optional = True
-                    sub_mod_name = line[:-1]
-                sub_mod_path = mod_paths.get(sub_mod_name)
-                if sub_mod_path is not None:
-                    if sub_mod_name not in loaded_mods:
-                        load_mod(sub_mod_path)
-                else:
-                    raise RuntimeError(
-                        "* ERROR: The mod {} is not in the paths"
-                        " ({})".format(sub_mod_name, ", ".join(paths))
-                    )
+        with open(depends_path) as ins:
+            current_depends.extend(
+                [line.strip() for line in ins]
+            )
+    mod_conf_path = os.path.join(mod_path, "mod.conf")
+    mod_conf = {}
+    if os.path.isfile(mod_conf_path):
+        with open(mod_conf_path) as ins:
+
+    for line in current_depends:
+        if len(line) > 0:
+            optional = False
+            sub_mod_name = line
+            if line.endswith("?"):
+                optional = True
+                sub_mod_name = line[:-1]
+            sub_mod_path = mod_paths.get(sub_mod_name)
+            if sub_mod_path is not None:
+                if sub_mod_name not in loaded_mods:
+                    load_mod(sub_mod_path)
+            else:
+                raise RuntimeError(
+                    "* ERROR: The mod {} is not in the paths"
+                    " ({})".format(sub_mod_name, ", ".join(paths))
+                )
 
     lua_path = os.path.join(mod_path, "init.lua")
+
     current_lines = [line.rstrip('\n') for line in open(lua_path)]
     loaded_lines.append('current_modname = "{}"'.format(name))
     # TODO: set _last_run_mod at the time of every lua call??
